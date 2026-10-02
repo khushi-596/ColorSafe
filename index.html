@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ColorSafe — Color Vision & Accessibility Studio</title>
+  <meta name="description" content="A tool to test images and color palettes for color vision accessibility (Protanopia, Deuteranopia, Tritanopia). Easy for designers, developers, students, and everyone.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="light-theme">
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-badge-playful">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2a10 10 0 0 1 0 20z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1>ColorSafe</h1>
+          <span class="brand-tagline">Color Vision & Palette Accessibility Studio</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="nav-tabs" role="tablist">
+        <button class="nav-tab active" data-tab="imageTab" role="tab" aria-selected="true" id="tab-image">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span>Picture Checker</span>
+        </button>
+        <button class="nav-tab" data-tab="paletteTab" role="tab" aria-selected="false" id="tab-palette">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+          <span>Color Helper</span>
+        </button>
+        <button class="nav-tab" data-tab="matrixTab" role="tab" aria-selected="false" id="tab-matrix">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>Color Matrix</span>
+        </button>
+      </nav>
+
+      <!-- Header Action Buttons -->
+      <div class="header-actions">
+        <button id="themeToggle" class="icon-btn-playful" title="Switch Theme">
+          <svg id="themeIconSun" class="hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg id="themeIconMoon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <button id="resetBtn" class="btn-playful btn-soft">Start Fresh</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-main">
+
+    <!-- ================= TAB 1: PICTURE CHECKER ================= -->
+    <section id="imageTab" class="tab-panel active" role="tabpanel" aria-labelledby="tab-image">
+      
+      <!-- Welcome Hero Card -->
+      <div class="hero-banner">
+        <div class="hero-icon-box">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+        </div>
+        <div class="hero-text">
+          <h2>See your pictures side-by-side</h2>
+          <p>Compare your original picture directly next to how people with different color vision see it.</p>
+        </div>
+      </div>
+
+      <!-- Vision Selector Controls -->
+      <div class="controls-card">
+        <div class="control-section">
+          <label class="control-label">Who are we checking for?</label>
+          <div class="vision-pills-grid">
+            <button class="vision-pill active" data-cvd="all">
+              <span class="color-dot dot-all"></span>
+              <div class="pill-info">
+                <strong>Everyone</strong>
+                <small>Check all vision types</small>
+              </div>
+            </button>
+            <button class="vision-pill" data-cvd="protanopia">
+              <span class="color-dot dot-red"></span>
+              <div class="pill-info">
+                <strong>Red Vision Friend</strong>
+                <small>Protanopia</small>
+              </div>
+            </button>
+            <button class="vision-pill" data-cvd="deuteranopia">
+              <span class="color-dot dot-green"></span>
+              <div class="pill-info">
+                <strong>Green Vision Friend</strong>
+                <small>Deuteranopia</small>
+              </div>
+            </button>
+            <button class="vision-pill" data-cvd="tritanopia">
+              <span class="color-dot dot-blue"></span>
+              <div class="pill-info">
+                <strong>Blue Vision Friend</strong>
+                <small>Tritanopia</small>
+              </div>
+            </button>
+            <button class="vision-pill" data-cvd="achromatopsia">
+              <span class="color-dot dot-mono"></span>
+              <div class="pill-info">
+                <strong>Monochrome Friend</strong>
+                <small>B&W Vision</small>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload Zone & Sample Buttons -->
+      <div class="upload-section-playful">
+        <div id="dropzone" class="dropzone-playful">
+          <input type="file" id="imageInput" accept="image/png,image/jpeg,image/webp,image/gif" class="file-input">
+          <div class="dropzone-content">
+            <div class="upload-icon-box">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div class="upload-text">
+              <strong>Drop your picture here</strong> or <span class="browse-link">click to pick one</span>
+              <small>Supports PNG, JPG, WEBP & GIF (Stays private in your browser)</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sample Picture Chips -->
+        <div class="sample-presets">
+          <span class="sample-label">Or try a sample picture:</span>
+          <div class="sample-buttons">
+            <button class="sample-chip-playful" data-sample="castle">Rainbow Castle</button>
+            <button class="sample-chip-playful" data-sample="chart">Math Bar Chart</button>
+            <button class="sample-chip-playful" data-sample="heatmap">World Heatmap</button>
+            <button class="sample-chip-playful" data-sample="palette">Candy Swatches</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Side-by-Side Picture Viewport Container -->
+      <div id="imageCanvasWrapper" class="canvas-workspace hidden">
+        <div class="canvas-card">
+          <div class="canvas-topbar">
+            <div class="canvas-badges">
+              <span id="imageDimensions" class="badge-playful badge-slate">0 × 0 px</span>
+              <span id="activeCvdLabel" class="badge-playful badge-purple">Protanopia View</span>
+              <span class="badge-playful badge-yellow">Click any spot on either picture to inspect color</span>
+            </div>
+            <div class="canvas-actions">
+              <button id="extractPaletteBtn" class="btn-playful btn-accent">
+                Extract Colors to Palette
+              </button>
+              <button id="downloadSimulatedBtn" class="btn-playful btn-soft">
+                Save Simulated Picture
+              </button>
+            </div>
+          </div>
+
+          <!-- Side-by-Side Comparison Layout -->
+          <div class="side-by-side-grid">
+            <div class="picture-card-box">
+              <div class="picture-card-header">
+                <span class="badge-playful badge-slate">Original Picture</span>
+              </div>
+              <div class="canvas-frame">
+                <canvas id="canvasOriginal"></canvas>
+              </div>
+            </div>
+
+            <div class="picture-card-box">
+              <div class="picture-card-header">
+                <span id="labelRight" class="badge-playful badge-purple">Red Vision Friend View</span>
+              </div>
+              <div class="canvas-frame">
+                <canvas id="canvasSimulated"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Enhanced Pixel Inspector Card -->
+        <div id="pixelInspector" class="inspector-card-playful">
+          <div class="inspector-title">
+            <div class="inspector-heading-box">
+              <h3>Color Inspector</h3>
+              <span class="inspector-subtitle">Click any spot on either picture above to inspect pixel metrics</span>
+            </div>
+            <div id="inspectedPosBadge" class="badge-playful badge-slate">Pixel: 0, 0</div>
+          </div>
+
+          <div class="inspector-cards-grid">
+            <div class="inspect-mini-card">
+              <span class="card-tag">ORIGINAL COLOR</span>
+              <div class="swatch-flex">
+                <div id="inspectOriginalSwatch" class="swatch-box-large"></div>
+                <div class="swatch-details">
+                  <div class="hex-row">
+                    <span id="inspectOriginalHex" class="code-text">#000000</span>
+                    <button id="copyOrigHexBtn" class="btn-copy-mini" title="Copy Original Hex">Copy</button>
+                  </div>
+                  <div id="inspectOriginalRgb" class="sub-text">RGB(0, 0, 0)</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="inspect-mini-card">
+              <span class="card-tag">HOW FRIEND SEES IT</span>
+              <div class="swatch-flex">
+                <div id="inspectSimulatedSwatch" class="swatch-box-large"></div>
+                <div class="swatch-details">
+                  <div class="hex-row">
+                    <span id="inspectSimulatedHex" class="code-text">#000000</span>
+                    <button id="copySimHexBtn" class="btn-copy-mini" title="Copy Simulated Hex">Copy</button>
+                  </div>
+                  <div id="inspectSimulatedRgb" class="sub-text">RGB(0, 0, 0)</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="inspect-mini-card">
+              <span class="card-tag">COLOR DIFFERENCE (ΔE76)</span>
+              <div id="inspectDeltaE" class="metric-text">0.0</div>
+              <div id="inspectDeltaLabel" class="sub-badge badge-playful badge-yellow">No shift</div>
+            </div>
+
+            <div class="inspect-mini-card">
+              <span class="card-tag">WCAG TEXT CONTRAST</span>
+              <div id="inspectContrast" class="metric-text">1.0 : 1</div>
+              <div class="badge-flex">
+                <span id="inspectWcagAa" class="badge-playful badge-slate">AA Pass</span>
+                <span id="inspectWcagAaa" class="badge-playful badge-slate">AAA Pass</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 2: COLOR PALETTE HELPER ================= -->
+    <section id="paletteTab" class="tab-panel" role="tabpanel" aria-labelledby="tab-palette">
+      
+      <!-- Palette Top Controls -->
+      <div class="hero-banner">
+        <div class="hero-icon-box">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+        </div>
+        <div class="hero-text">
+          <h2>Make sure everyone can tell your colors apart</h2>
+          <p>Add your project colors below. ColorSafe will check if any colors look too twin-like and offer an Auto-Fix.</p>
+        </div>
+      </div>
+
+      <div class="controls-card">
+        <div class="control-row">
+          <div class="select-box">
+            <label for="palettePresetSelect">Pick a Ready Palette:</label>
+            <select id="palettePresetSelect" class="form-select-playful">
+              <option value="" disabled selected>Choose a theme...</option>
+              <option value="candy">Candy Rainbow</option>
+              <option value="superhero">Superhero Colors</option>
+              <option value="ocean">Ocean Explorer</option>
+              <option value="pastel">Soft Pastels</option>
+              <option value="problematic">Colliding Red/Green Pair</option>
+            </select>
+          </div>
+
+          <div class="select-box">
+            <label for="paletteCvdSelect">Friend Vision Filter:</label>
+            <select id="paletteCvdSelect" class="form-select-playful">
+              <option value="all" selected>Everyone (All Vision Friends)</option>
+              <option value="protanopia">Red Vision Friend (Protanopia)</option>
+              <option value="deuteranopia">Green Vision Friend (Deuteranopia)</option>
+              <option value="tritanopia">Blue Vision Friend (Tritanopia)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="studio-layout">
+
+        <!-- Left Column: Swatches Editor -->
+        <div class="studio-card editor-card">
+          <div class="card-title-row">
+            <h3>Your Colors</h3>
+            <div class="title-actions">
+              <button id="sortHueBtn" class="btn-playful btn-chip">Sort by Rainbow</button>
+              <button id="sortLumBtn" class="btn-playful btn-chip">Sort by Brightness</button>
+            </div>
+          </div>
+
+          <div id="paletteEditor" class="swatch-editor-grid">
+            <!-- Palette rows rendered via JS -->
+          </div>
+
+          <div class="editor-footer">
+            <button id="addColorBtn" class="btn-playful btn-primary">+ Add Another Color</button>
+            <span id="paletteCount" class="palette-count">5 / 16 colors</span>
+          </div>
+        </div>
+
+        <!-- Right Column: Status & Auto-Fix -->
+        <div class="studio-sidebar">
+
+          <!-- Threshold Slider -->
+          <div class="studio-card">
+            <div class="threshold-header">
+              <div>
+                <strong>Sensitivity Slider</strong>
+                <p>Standard fixed distance threshold is ΔE = 20.</p>
+              </div>
+              <span id="thresholdVal" class="badge-playful badge-purple">ΔE 20</span>
+            </div>
+            <input type="range" id="thresholdSlider" min="10" max="40" step="1" value="20" class="form-range-playful">
+          </div>
+
+          <!-- Status Box -->
+          <div id="statusSummaryBox" class="status-card-playful">
+            <div id="statusBadge" class="badge-playful badge-green">Great Job</div>
+            <h3 id="statusTitle">Your colors look awesome</h3>
+            <p id="statusDesc">All your colors are nice and distinct so all friends can tell them apart easily.</p>
+          </div>
+
+          <!-- Auto-Fix Card -->
+          <div id="correctionCard" class="studio-card correction-card hidden">
+            <div class="card-title-row">
+              <div>
+                <h3>Recommended Friendly Fix</h3>
+                <p>We tweaked the hues slightly so they stay bright while becoming easy to tell apart.</p>
+              </div>
+            </div>
+
+            <div id="correctedSwatchesPreview" class="corrected-preview-grid">
+              <!-- Rendered corrected colors -->
+            </div>
+
+            <div class="action-buttons-row">
+              <button id="applyFixBtn" class="btn-playful btn-success">Use Fixed Colors</button>
+              <button id="undoFixBtn" class="btn-playful btn-soft" disabled>Undo</button>
+              <button id="exportBtn" class="btn-playful btn-accent">Copy / Export Colors</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 3: COLOR MYSTERY MATRIX ================= -->
+    <section id="matrixTab" class="tab-panel" role="tabpanel" aria-labelledby="tab-matrix">
+      <div class="hero-banner">
+        <div class="hero-icon-box">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </div>
+        <div class="hero-text">
+          <h2>Color Distance Matrix</h2>
+          <p>Compare the mathematical difference (ΔE) between every pair of colors in your palette.</p>
+        </div>
+      </div>
+
+      <div class="matrix-card-playful">
+        <div class="matrix-header-info">
+          <span class="legend-chip legend-safe">Safe Pair (ΔE ≥ 20)</span>
+          <span class="legend-chip legend-warning">Too Similar Pair (ΔE &lt; 20)</span>
+        </div>
+        <div id="matrixTableWrapper" class="matrix-table-wrapper">
+          <!-- Table rendered via JS -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Export Dialog Modal -->
+  <dialog id="exportModal" class="app-dialog">
+    <div class="dialog-content-playful">
+      <div class="dialog-header">
+        <h3>Export Your Colors</h3>
+        <button id="closeExportBtn" class="dialog-close" aria-label="Close modal">×</button>
+      </div>
+      <div class="dialog-body">
+        <div class="export-tabs">
+          <button class="export-tab active" data-format="hex">Hex Codes</button>
+          <button class="export-tab" data-format="css">CSS Variables</button>
+          <button class="export-tab" data-format="json">JSON Array</button>
+          <button class="export-tab" data-format="tailwind">Tailwind Config</button>
+        </div>
+        <textarea id="exportCodeText" class="export-code-playful" readonly rows="8"></textarea>
+      </div>
+      <div class="dialog-footer">
+        <button id="copyExportBtn" class="btn-playful btn-primary">Copy Code to Clipboard</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Toast Notification -->
+  <div id="toastNotification" class="toast-playful hidden">
+    <span id="toastMsg">Action completed</span>
+  </div>
+
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div>
+        <strong>ColorSafe Studio</strong> &mdash; Making colors easy and friendly for everyone
+      </div>
+      <div>
+        CIE76 ΔE Threshold &bull; Viénot / Machado Simulation &bull; Client-side Private Canvas
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/color.js"></script>
+  <script src="js/cvd.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
