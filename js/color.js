@@ -185,10 +185,65 @@ const ColorMath = (() => {
       .toUpperCase();
   }
 
+  const NAMED_COLORS = [
+    { name: "Black", rgb: {r: 0, g: 0, b: 0} },
+    { name: "White", rgb: {r: 255, g: 255, b: 255} },
+    { name: "Gray", rgb: {r: 128, g: 128, b: 128} },
+    { name: "Light Gray", rgb: {r: 211, g: 211, b: 211} },
+    { name: "Dark Gray", rgb: {r: 169, g: 169, b: 169} },
+    { name: "Red", rgb: {r: 255, g: 0, b: 0} },
+    { name: "Dark Red", rgb: {r: 139, g: 0, b: 0} },
+    { name: "Coral Red", rgb: {r: 255, g: 82, b: 82} },
+    { name: "Pink", rgb: {r: 255, g: 192, b: 203} },
+    { name: "Hot Pink", rgb: {r: 255, g: 105, b: 180} },
+    { name: "Orange", rgb: {r: 255, g: 165, b: 0} },
+    { name: "Amber", rgb: {r: 255, g: 191, b: 0} },
+    { name: "Yellow", rgb: {r: 255, g: 255, b: 0} },
+    { name: "Brown", rgb: {r: 165, g: 42, b: 42} },
+    { name: "Olive", rgb: {r: 128, g: 128, b: 0} },
+    { name: "Green", rgb: {r: 0, g: 128, b: 0} },
+    { name: "Forest Green", rgb: {r: 34, g: 139, b: 34} },
+    { name: "Lime", rgb: {r: 0, g: 255, b: 0} },
+    { name: "Mint Green", rgb: {r: 152, g: 255, b: 152} },
+    { name: "Teal", rgb: {r: 0, g: 128, b: 128} },
+    { name: "Cyan", rgb: {r: 0, g: 255, b: 255} },
+    { name: "Sky Blue", rgb: {r: 135, g: 206, b: 235} },
+    { name: "Blue", rgb: {r: 0, g: 0, b: 255} },
+    { name: "Navy Blue", rgb: {r: 0, g: 0, b: 128} },
+    { name: "Purple", rgb: {r: 128, g: 0, b: 128} },
+    { name: "Magenta", rgb: {r: 255, g: 0, b: 255} },
+    { name: "Lavender", rgb: {r: 230, g: 230, b: 250} },
+    { name: "Peach", rgb: {r: 255, g: 218, b: 185} },
+    { name: "Maroon", rgb: {r: 128, g: 0, b: 0} }
+  ];
+
+  function getColorName(rgb) {
+    let bestName = "Unknown";
+    let minDelta = Infinity;
+    for (const nc of NAMED_COLORS) {
+      const d = deltaE76(rgb, nc.rgb);
+      if (d < minDelta) {
+        minDelta = d;
+        bestName = nc.name;
+      }
+    }
+    return bestName;
+  }
+
+  function getLuminancePercent(rgb) {
+    return Math.round(relativeLuminance(rgb) * 100);
+  }
+
+  function searchColorsByName(query) {
+    const lower = query.toLowerCase();
+    return NAMED_COLORS.filter(nc => nc.name.toLowerCase().includes(lower));
+  }
+
   return {
     multiplyMatrixVector, clamp, srgbToLinear, linearToSrgb,
     rgbToLms, lmsToRgb, rgbToHsv, hsvToRgb,
     relativeLuminance, contrastRatio, restoreLuminance,
-    rotateHue, rgbToLab, deltaE76, hexToRgb, rgbToHex
+    rotateHue, rgbToLab, deltaE76, hexToRgb, rgbToHex,
+    NAMED_COLORS, getColorName, getLuminancePercent, searchColorsByName
   };
 })();
