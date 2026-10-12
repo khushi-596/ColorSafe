@@ -147,7 +147,7 @@ const els = {
   // Export Modal & Toast
   exportModal: $("exportModal"),
   closeExportBtn: $("closeExportBtn"),
-  exportTabs: document.querySelectorAll(".export-tab"),
+  exportTabs: document.querySelectorAll(".format-pill"),
   exportCodeText: $("exportCodeText"),
   copyExportBtn: $("copyExportBtn"),
   toastNotification: $("toastNotification"),
@@ -202,7 +202,7 @@ function processImage(img) {
 
   els.imageDimensions.textContent = `${img.naturalWidth} × ${img.naturalHeight} px`;
 
-  [els.canvasOriginal, els.canvasSimulated, els.canvasFixed].forEach(c => {
+  [els.canvasOriginal, els.canvasSimulated].forEach(c => {
     c.width = width;
     c.height = height;
   });
@@ -393,10 +393,11 @@ function inspectPixel(x, y) {
 
   const idx = (clampedY * w + clampedX) * 4;
 
+  const sourceData = state.fixedImageData || state.imageData;
   const origRgb = {
-    r: state.imageData.data[idx],
-    g: state.imageData.data[idx + 1],
-    b: state.imageData.data[idx + 2]
+    r: sourceData.data[idx],
+    g: sourceData.data[idx + 1],
+    b: sourceData.data[idx + 2]
   };
 
   const simRgb = {
@@ -491,37 +492,55 @@ function recolorImageWithFixes(changes) {
   const activeChanges = changes.filter(c => c.fixed && c.angle !== 0);
   if (activeChanges.length === 0) return;
   
+  // Precompute HSV shifts for each change
+  const changeData = activeChanges.map(c => ({
+    original: c.original,
+    angle: c.angle,
+    origHsv: ColorMath.rgbToHsv(c.original)
+  }));
+  
+  // Gaussian-like smooth blending parameters
+  const sigma = 18; // Controls transition smoothness
+  const maxRadius = 55; // Maximum match distance
+  const sigmaSquared2 = 2 * sigma * sigma;
+  
   for (let i = 0; i < src.length; i += 4) {
     if (src[i + 3] === 0) continue; // Skip transparent
     
     const pixel = { r: src[i], g: src[i+1], b: src[i+2] };
     
-    // Find closest changed color
+    // Find the closest change and compute smooth blend weight
     let bestChange = null;
     let minDelta = Infinity;
     
-    for (const change of activeChanges) {
+    for (const change of changeData) {
       const delta = ColorMath.deltaE76(pixel, change.original);
-      if (delta < 30) { // Threshold for color grouping
-        if (delta < minDelta) {
-          minDelta = delta;
-          bestChange = change;
-        }
+      if (delta < maxRadius && delta < minDelta) {
+        minDelta = delta;
+        bestChange = change;
       }
     }
     
     if (bestChange) {
-      const originalLuminance = ColorMath.relativeLuminance(pixel);
-      let newPixel = ColorMath.rotateHue(pixel, bestChange.angle);
-      newPixel = ColorMath.restoreLuminance(newPixel, originalLuminance);
+      // Smooth Gaussian falloff weight: 1.0 at center, fades to ~0 at edges
+      const weight = Math.exp(-(minDelta * minDelta) / sigmaSquared2);
       
-      src[i] = newPixel.r;
-      src[i+1] = newPixel.g;
-      src[i+2] = newPixel.b;
+      if (weight > 0.01) { // Skip negligible weights
+        const originalLuminance = ColorMath.relativeLuminance(pixel);
+        const rotated = ColorMath.rotateHue(pixel, bestChange.angle * weight);
+        const restored = ColorMath.restoreLuminance(rotated, originalLuminance);
+        
+        // Blend between original and rotated based on weight for ultra-smooth transitions
+        src[i]     = Math.round(pixel.r + (restored.r - pixel.r) * weight);
+        src[i + 1] = Math.round(pixel.g + (restored.g - pixel.g) * weight);
+        src[i + 2] = Math.round(pixel.b + (restored.b - pixel.b) * weight);
+      }
     }
   }
   
   state.fixedImageData = fixedImageData;
+  els.canvasFixed.width = fixedImageData.width;
+  els.canvasFixed.height = fixedImageData.height;
   const ctxFixed = els.canvasFixed.getContext("2d");
   ctxFixed.putImageData(fixedImageData, 0, 0);
   
@@ -845,8 +864,6 @@ function initHexPicker() {
     grayRow.appendChild(cell);
   }
   els.hexGridContainer.appendChild(grayRow);
-
-  els.closeHexPickerBtn.addEventListener("click", closeHexPicker);
 }
 
 function openHexPicker(idx) {
@@ -863,6 +880,7 @@ function closeHexPicker() {
 // Attach Event Listeners
 function setupEvents() {
   els.themeToggle.addEventListener("click", toggleTheme);
+  els.closeHexPickerBtn.addEventListener("click", closeHexPicker);
 
   els.navTabs.forEach(tab => {
     tab.addEventListener("click", () => switchTab(tab.dataset.tab));
@@ -958,7 +976,7 @@ function setupEvents() {
   els.extractPaletteBtn.addEventListener("click", extractPaletteFromImage);
 
   els.downloadSimulatedBtn.addEventListener("click", () => {
-    if (!els.canvasSimulated) return;
+    if (!state.simulatedData) return;
     const link = document.createElement("a");
     link.download = `colorsafe-picture-${state.imageCvd}.png`;
     link.href = els.canvasSimulated.toDataURL();
@@ -978,7 +996,7 @@ function setupEvents() {
 
   els.paletteCvdSelect.addEventListener("change", e => {
     state.paletteCvd = e.target.value;
-    analyzePaletteStudio();
+    renderPaletteStudio();
   });
 
   els.addColorBtn.addEventListener("click", () => {
@@ -1057,11 +1075,15 @@ function setupEvents() {
 
   if (els.downloadFixedImageBtn) {
     els.downloadFixedImageBtn.addEventListener("click", () => {
+      if (!state.fixedImageData) {
+        showToast("No fixed image to download yet");
+        return;
+      }
       const link = document.createElement("a");
       link.download = "ColorSafe_Fixed.png";
-      // Download from fixed canvas
       link.href = els.canvasFixed.toDataURL();
       link.click();
+      showToast("Fixed image saved to downloads");
     });
   }
 
@@ -1104,11 +1126,30 @@ function setupEvents() {
       { r: 139, g: 92, b: 246 }
     ];
     state.threshold = 20;
+    state.image = null;
+    state.imageData = null;
+    state.simulatedData = null;
+    state.fixedImageData = null;
+    state.inspectedPixel = null;
+    state.previousPalette = null;
+    state.correctedPalette = [];
     
     // Reset vision pills
     els.visionPills.forEach(p => p.classList.toggle("active", p.dataset.cvd === "all"));
+    state.imageCvd = "all";
+    state.paletteCvd = "all";
     
-    generateSampleImage("castle");
+    // Hide image workspace
+    els.imageCanvasWrapper.classList.add("hidden");
+    els.fixedPictureCard.classList.add("hidden");
+    els.imageActionsWrapper.classList.add("hidden");
+    els.inspectSummary.classList.add("hidden");
+    
+    // Reset selects
+    els.paletteCvdSelect.value = "all";
+    els.palettePresetSelect.selectedIndex = 0;
+    els.undoFixBtn.disabled = true;
+    
     renderPaletteStudio();
     showToast("Started fresh");
   });

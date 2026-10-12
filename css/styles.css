@@ -734,11 +734,8 @@ h1,h2,h3,h4 {
 }
 
 .pattern-swatch {
-  background-image: repeating-linear-gradient(
-    45deg,
-    rgba(255,255,255,0.18) 0, rgba(255,255,255,0.18) 2px,
-    transparent 2px, transparent 6px
-  );
+  /* Subtle inner glow for depth without distorting actual color */
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.15), inset 0 -1px 2px rgba(0,0,0,0.08);
 }
 
 .swatch-details { display: flex; flex-direction: column; gap: 2px; }
@@ -1045,7 +1042,12 @@ h1,h2,h3,h4 {
 .hex-picker-content {
   max-width: 420px;
   padding: 20px;
+  padding-top: 0;
   text-align: center;
+}
+@media (max-width: 480px) {
+  .hex-picker-content { max-width: 100%; padding: 12px; padding-top: 0; }
+  .hex-cell { width: 22px; height: 26px; }
 }
 
 .hexagon-grid {
