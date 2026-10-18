@@ -577,6 +577,13 @@ function extractPaletteFromImage() {
 
   if (sorted.length >= 2) {
     state.palette = sorted;
+
+    // Sync the CVD type from Picture Checker to Color Helper
+    const validPaletteCvd = ["all", "protanopia", "deuteranopia", "tritanopia"];
+    const synced = validPaletteCvd.includes(state.imageCvd) ? state.imageCvd : "all";
+    state.paletteCvd = synced;
+    els.paletteCvdSelect.value = synced;
+
     showToast("Extracted 6 key colors to Palette Helper");
     switchTab("paletteTab");
   }
