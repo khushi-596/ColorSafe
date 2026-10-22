@@ -478,7 +478,7 @@ function inspectPixel(x, y) {
   }
 }
 
-function recolorImageWithFixes(changes) {
+function recolorImageWithFixes(changes, originalPalette) {
   if (!state.imageData) return;
   
   // Create fixed image data
@@ -489,15 +489,16 @@ function recolorImageWithFixes(changes) {
   );
   
   const src = fixedImageData.data;
-  const activeChanges = changes.filter(c => c.fixed && c.angle !== 0);
+  const activeChanges = changes.filter(c => c.angle !== 0); // full and partial fixes
   if (activeChanges.length === 0) return;
   
-  // Precompute HSV shifts for each change
-  const changeData = activeChanges.map(c => ({
-    original: c.original,
-    angle: c.angle,
-    origHsv: ColorMath.rgbToHsv(c.original)
-  }));
+  // Every palette colour is an anchor: fixed colours carry their rotation angle,
+  // unchanged colours carry angle 0. A pixel follows its NEAREST anchor, so a swatch
+  // that was not fixed is never pulled along by a nearby fixed colour.
+  const changeData = (originalPalette || activeChanges.map(c => c.original)).map(color => {
+    const change = activeChanges.find(c => ColorMath.deltaE76(c.original, color) < 0.5);
+    return { original: color, angle: change ? change.angle : 0 };
+  });
   
   // Gaussian-like smooth blending parameters
   const sigma = 18; // Controls transition smoothness
@@ -521,7 +522,7 @@ function recolorImageWithFixes(changes) {
       }
     }
     
-    if (bestChange) {
+    if (bestChange && bestChange.angle !== 0) {
       // Smooth Gaussian falloff weight: 1.0 at center, fades to ~0 at edges
       const weight = Math.exp(-(minDelta * minDelta) / sigmaSquared2);
       
@@ -547,47 +548,80 @@ function recolorImageWithFixes(changes) {
   els.fixedPictureCard.classList.remove("hidden");
   updateImageSimulation();
   els.imageActionsWrapper.classList.remove("hidden");
-  showToast("Image recolored perfectly!");
+  // Re-verify: take the main colours of the FIXED image and check every pair again
+  const fixedColors = getKeyColors(fixedImageData);
+  let clashes = 0;
+  for (let i = 0; i < fixedColors.length; i++) {
+    for (let j = i + 1; j < fixedColors.length; j++) {
+      if (!CVD.isPairSafe(fixedColors[i], fixedColors[j], state.paletteCvd, state.threshold)) clashes++;
+    }
+  }
+  showToast(clashes === 0
+    ? "Image recolored. Re-check passed: no clashing colors."
+    : `Image recolored. Re-check: ${clashes} pair(s) still look similar.`);
 }
 
 // Extract Palette
-function extractPaletteFromImage() {
-  if (!state.imageData) return;
-
-  const data = state.imageData.data;
+// Finds the main colours of an image.
+// - skips near-white and near-black pixels (backgrounds; hue rotation cannot change them anyway)
+// - merges colours that look almost the same (ΔE < 12) so each pick is a different colour
+// - ignores tiny specks (edge pixels) and returns up to 12 colours
+function getKeyColors(imageData, maxColors = 12) {
+  const data = imageData.data;
   const colorMap = {};
   const step = 8 * 4;
+  let sampled = 0;
 
   for (let i = 0; i < data.length; i += step) {
     if (data[i + 3] < 128) continue;
-    const r = Math.round(data[i] / 24) * 24;
-    const g = Math.round(data[i + 1] / 24) * 24;
-    const b = Math.round(data[i + 2] / 24) * 24;
-    const key = `${r},${g},${b}`;
-    colorMap[key] = (colorMap[key] || 0) + 1;
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    if (r >= 235 && g >= 235 && b >= 235) continue; // near-white background
+    if (r <= 20 && g <= 20 && b <= 20) continue;    // near-black background
+    sampled++;
+    const key = `${Math.round(r / 24)},${Math.round(g / 24)},${Math.round(b / 24)}`;
+    const bucket = colorMap[key] || (colorMap[key] = { count: 0, r: 0, g: 0, b: 0 });
+    bucket.count++; bucket.r += r; bucket.g += g; bucket.b += b; // keep sums to get the true average colour
   }
 
-  const sorted = Object.entries(colorMap)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
-    .map(([key]) => {
-      const [r, g, b] = key.split(",").map(Number);
-      return { r, g, b };
+  const minCount = sampled * 0.005; // ignore colours covering less than 0.5% of the image
+  const picked = [];
+  Object.values(colorMap)
+    .sort((a, b) => b.count - a.count)
+    .forEach(bucket => {
+      if (picked.length >= maxColors || bucket.count < minCount) return;
+      const color = {
+        r: Math.round(bucket.r / bucket.count),
+        g: Math.round(bucket.g / bucket.count),
+        b: Math.round(bucket.b / bucket.count)
+      };
+      if (picked.every(p => ColorMath.deltaE76(p, color) >= 12)) picked.push(color);
     });
+  return picked;
+}
 
-  if (sorted.length >= 2) {
-    state.palette = sorted;
+function extractPaletteFromImage() {
+  if (!state.imageData) return;
+
+  const colors = getKeyColors(state.imageData);
+
+  if (colors.length >= 2) {
+    state.palette = colors;
 
     // Sync the CVD type from Picture Checker to Color Helper
     const validPaletteCvd = ["all", "protanopia", "deuteranopia", "tritanopia"];
-    const synced = validPaletteCvd.includes(state.imageCvd) ? state.imageCvd : "all";
+    const synced = validPaletteCvd.includes(state.imageCvd)
+      ? state.imageCvd
+      : "all";
+
     state.paletteCvd = synced;
     els.paletteCvdSelect.value = synced;
 
-    showToast("Extracted 6 key colors to Palette Helper");
+    showToast(`Extracted ${colors.length} key colors to Palette Helper`);
+
     switchTab("paletteTab");
   }
 }
+
 
 // Palette Studio Rendering
 function renderPaletteStudio() {
@@ -691,7 +725,7 @@ function renderCorrectedPreview(fixResult) {
     chip.style.width = "100%";
     chip.style.textAlign = "left";
     
-    if (change && change.fixed) {
+    if (change && change.angle !== 0) {
       chip.innerHTML = `
         <div style="padding: 6px; font-size: 14px; display: flex; align-items: center; gap: 8px;">
           <div class="mini-swatch pattern-swatch" style="background-color: ${ColorMath.rgbToHex(change.original)};"></div>
@@ -699,7 +733,7 @@ function renderCorrectedPreview(fixResult) {
           <span>→</span>
           <div class="mini-swatch pattern-swatch" style="background-color: ${hex};"></div>
           <strong>${ColorMath.getColorName(color)}</strong>
-          <span style="color:var(--text-muted); font-size: 12px; margin-left: 8px;">(shifted color tone)</span>
+          <span style="color:var(--text-muted); font-size: 12px; margin-left: 8px;">${change.fixed ? "(shifted color tone)" : "(improved, still close to another color)"}</span>
         </div>
       `;
       els.correctedSwatchesPreview.appendChild(chip);
@@ -1057,11 +1091,11 @@ function setupEvents() {
     els.undoFixBtn.disabled = false;
     
     if (state.imageData && state.fixChanges) {
-      recolorImageWithFixes(state.fixChanges);
+      recolorImageWithFixes(state.fixChanges, state.previousPalette);
     }
     
     renderPaletteStudio();
-    showToast("Applied Fixed Colors");
+    if (!state.imageData || !state.fixChanges) showToast("Applied Fixed Colors");
   });
 
   els.undoFixBtn.addEventListener("click", () => {

@@ -68,50 +68,78 @@ const CVD = (() => {
     return minimumSimulatedDistance(a, b, selected).deltaE >= threshold;
   }
 
-  function correctColor(original, currentPalette, selected, threshold) {
-    const targetLuminance = ColorMath.relativeLuminance(original);
+  // How well a candidate colour fits the rest of the palette:
+  // the number of clashing pairs (fewer is better), then the smallest ΔE (bigger is better).
+  function scoreCandidate(candidate, palette, skipIndex, selected, threshold) {
+    let clashes = 0;
+    let minDelta = Infinity;
+    palette.forEach((other, i) => {
+      if (i === skipIndex) return; // never compare a colour with itself
+      const d = minimumSimulatedDistance(candidate, other, selected).deltaE;
+      if (d < threshold) clashes++;
+      if (d < minDelta) minDelta = d;
+    });
+    return { clashes, minDelta };
+  }
 
-    // Try small hue rotations, searching for a visually close color that satisfies ΔE
+  function isBetter(a, b) {
+    return a.clashes < b.clashes || (a.clashes === b.clashes && a.minDelta > b.minDelta + 0.5);
+  }
+
+  function correctColor(original, currentPalette, selected, threshold, index = -1) {
+    const targetLuminance = ColorMath.relativeLuminance(original);
+    let best = { color: { ...original }, angle: 0, ...scoreCandidate(original, currentPalette, index, selected, threshold) };
+    if (best.clashes === 0) return { color: best.color, angle: 0, fixed: true };
+
+    // Try small hue rotations first (5°, -5°, 10°, -10° ... 180°).
+    // The first fully safe one wins; otherwise keep the rotation that removes the most clashes.
     for (let angle = 5; angle <= 180; angle += 5) {
       for (const signedAngle of [angle, -angle]) {
         let candidate = ColorMath.rotateHue(original, signedAngle);
         candidate = ColorMath.restoreLuminance(candidate, targetLuminance);
+        const score = scoreCandidate(candidate, currentPalette, index, selected, threshold);
 
-        let safe = true;
-        for (const other of currentPalette) {
-          if (other === original) continue;
-          if (!isPairSafe(candidate, other, selected, threshold)) {
-            safe = false;
-            break;
-          }
-        }
-
-        if (safe) {
+        if (score.clashes === 0) {
           return { color: candidate, angle: signedAngle, fixed: true };
+        }
+        if (isBetter(score, best)) {
+          best = { color: candidate, angle: signedAngle, ...score };
         }
       }
     }
 
-    return { color: { ...original }, angle: 0, fixed: false };
+    // No fully safe angle: return the best improvement found (partial fix)
+    return { color: best.color, angle: best.angle, fixed: false, partial: best.angle !== 0 };
   }
 
-  function correctPalette(palette, selected, threshold, problematicIndices) {
-    // Work on a copy of the palette and update candidate choices dynamically
+  function correctPalette(palette, selected, threshold, problematicIndices, passes = 3) {
+    // Work on a copy of the palette. Several passes, because moving one colour
+    // can make room for (or crowd) another.
     const workingPalette = palette.map(c => ({ ...c }));
-    const changes = [];
+    const angles = palette.map(() => 0);
 
-    for (const index of problematicIndices) {
-      const originalColor = palette[index];
-      const result = correctColor(originalColor, workingPalette, selected, threshold);
-      workingPalette[index] = result.color;
-      changes.push({
-        index,
-        original: originalColor,
-        corrected: result.color,
-        angle: result.angle,
-        fixed: result.fixed
-      });
+    for (let pass = 0; pass < passes; pass++) {
+      let changed = false;
+      for (const index of problematicIndices) {
+        const result = correctColor(palette[index], workingPalette, selected, threshold, index);
+        if (result.angle !== angles[index]) changed = true;
+        workingPalette[index] = result.color;
+        angles[index] = result.angle;
+      }
+      if (!changed) break;
     }
+
+    const changes = problematicIndices.map(index => {
+      const stillClashes = scoreCandidate(workingPalette[index], workingPalette, index, selected, threshold).clashes;
+      return {
+        index,
+        original: palette[index],
+        corrected: workingPalette[index],
+        angle: angles[index],
+        fixed: stillClashes === 0,
+        partial: stillClashes > 0 && angles[index] !== 0
+      };
+    });
 
     return { corrected: workingPalette, changes };
   }
